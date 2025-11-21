@@ -23,6 +23,8 @@ builder.Services.AddScoped<IProductInterfaces, ProductService>();
 builder.Services.AddScoped<IUserInterfaces, UsersService>();
 builder.Services.AddScoped<ILogActionInterfaces, LogActionService>();
 builder.Services.AddScoped<ICategoryInterfaces, CategoryService>();
+builder.Services.AddScoped<IBasketInterfaces, BasketService>();
+builder.Services.AddScoped<IOrderInterfaces, OrderService>();
 
 var app = builder.Build();
 

@@ -359,22 +359,31 @@ namespace _8_prac_JWT.Service
                 message = "Успешно"
             });
         }
-        // топ 10 товаров
-        //public async Task<IActionResult> Top10ProductsAsync()
-        //{
-        //    var topProducts = await _context.BasketItems.Include(bi => bi.Product).Include(bi => bi.Basket.Order).Where(bi => bi.Basket.Order.status_id == 4).GroupBy(bi => bi.Product.product_name)
-        //    .Select(g => new
-        //    {
-        //        ProductName = g.Key,
-        //        TimesSold = g.Count(),
-        //        TotalRevenue = g.Sum(bi => bi.Product.price)
-        //    }).OrderByDescending(p => p.TimesSold).ToListAsync();
 
-        //    return new OkObjectResult(new
-        //    {
-        //        status = true,
-        //        data = new { topProducts = topProducts }
-        //    });
-        //}
+        public async Task<IActionResult> Top10ProductsAsync()
+        {
+            var topProducts = await _context.BasketItems.Include(bi => bi.Product).Include(bi => bi.Basket.Order).Where(bi => bi.Basket.Order.Status_id == 4).GroupBy(bi => bi.Product.Product_name)
+            .Select(g => new
+            {
+                ProductName = g.Key,
+                TimesSold = g.Count(),
+                TotalRevenue = g.Sum(bi => bi.Product.Price)
+            }).OrderByDescending(p => p.TimesSold).ToListAsync();
+
+            if(topProducts.Count == 0)
+            {
+                return new NotFoundObjectResult(new
+                {
+                    status = false,
+                    message = "Нет статистики"
+                });
+            }
+
+            return new OkObjectResult(new
+            {
+                status = true,
+                data = new { topProducts = topProducts }
+            });
+        }
     }
 }

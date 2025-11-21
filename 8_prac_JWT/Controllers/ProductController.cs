@@ -45,6 +45,13 @@ namespace _8_prac_JWT.Controllers
         {
             return await _productService.DeleteProductAsync(deleteProduct);
         }
-        
+
+        [HttpGet]
+        [Route("Top10Product")]
+        [RoleAuthorized([2])]
+        public async Task<IActionResult> Top10ProductsAsync()
+        {
+            return await _productService.Top10ProductsAsync();
+        }
     }
 }

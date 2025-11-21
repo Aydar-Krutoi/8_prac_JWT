@@ -9,5 +9,6 @@ namespace _8_prac_JWT.Interfaces
         Task<IActionResult> PostNewProductAsync(PostNewProductRequest postNewProduct);
         Task<IActionResult> PutProductAsync(PutProductRequest putProduct);
         Task<IActionResult> DeleteProductAsync(DeleteProductRequest deleteProduct);
+        Task<IActionResult> Top10ProductsAsync();
     }
 }
