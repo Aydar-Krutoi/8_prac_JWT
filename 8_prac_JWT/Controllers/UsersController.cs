@@ -78,5 +78,46 @@ namespace _8_prac_JWT.Controllers
         {
             return await _userService.PutUserAsync(putUserRequest);
         }
+
+        [HttpPut]
+        [Route("UpdateEmployee")]
+        [RoleAuthorized([1])]
+        public async Task<IActionResult> PutEmployeeAsync([FromBody] PutEmployeeRequest putEmployeeRequest)
+        {
+            return await _userService.PutEmployeeAsync(putEmployeeRequest);
+        }
+
+        [HttpPut]
+        [Route("UpdatAdminMyProfile")]
+        [RoleAuthorized([1])]
+        public async Task<IActionResult> PutMyProfileAdminAsync([FromBody] PutAdminMyProfilesRequests putAdminMyProfiles)
+        {
+            return await _userService.PutMyProfileAdminAsync(putAdminMyProfiles);
+        }
+
+        [HttpPut]
+        [Route("UpdateEmployeeMyProfile")]
+        [RoleAuthorized([2])]
+        public async Task<IActionResult> PutMyProfileEmployeeAsync([FromBody] PutEmployeeMyProfileRequests putEmployeeMyProfile)
+        {
+            return await _userService.PutMyProfileEmployeeAsync(putEmployeeMyProfile);
+        }
+
+        [HttpPut]
+        [Route("UpdateUserMyProfile")]
+        [RoleAuthorized([3])]
+        public async Task<IActionResult> PutUserMyProfileAsync([FromBody] PutUserMyProfilesRequests putUserMyProfile)
+        {
+            return await _userService.PutUserMyProfileAsync(putUserMyProfile);
+        }
+
+        [HttpPut]
+        [Route("NewRoleUser")]
+        [RoleAuthorized([1])]
+        public async Task<IActionResult> PutUserRoleAsync([FromBody] PutUserRoleRequest putUserRole)
+        {
+            return await _userService.PutUserRoleAsync(putUserRole);
+        }
+        
     }
 }

@@ -16,10 +16,13 @@ builder.Services.AddDbContext<ContextDb>(options => options.UseSqlServer(builder
 
 // JWT  
 builder.Services.AddSingleton<JwtGenerator>();
+builder.Services.AddHttpContextAccessor();
 
 //HTTP
 builder.Services.AddScoped<IProductInterfaces, ProductService>();
 builder.Services.AddScoped<IUserInterfaces, UsersService>();
+builder.Services.AddScoped<ILogActionInterfaces, LogActionService>();
+builder.Services.AddScoped<ICategoryInterfaces, CategoryService>();
 
 var app = builder.Build();
 

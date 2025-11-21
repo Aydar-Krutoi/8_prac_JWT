@@ -13,6 +13,11 @@ namespace _8_prac_JWT.Interfaces
         Task<IActionResult> GetAllUserAsync( );
         Task<IActionResult> GetAllEmployeeAsync( );
         Task<IActionResult> PutUserAsync(PutUserRequest putUserRequest);
-        Task<IActionResult> PutEmpl
+        Task<IActionResult> PutEmployeeAsync(PutEmployeeRequest putEmployeeRequest);
+        Task<IActionResult> PutMyProfileEmployeeAsync(PutEmployeeMyProfileRequests putEmployeeMyProfile);
+        Task<IActionResult> PutUserMyProfileAsync(PutUserMyProfilesRequests putUserMyProfile);
+        Task<IActionResult> PutMyProfileAdminAsync(PutAdminMyProfilesRequests putAdminMyProfiles);
+        Task<IActionResult> PutUserRoleAsync(PutUserRoleRequest putUserRole);
+
     }
 }

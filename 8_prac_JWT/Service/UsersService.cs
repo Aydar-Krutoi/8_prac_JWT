@@ -12,11 +12,13 @@ namespace _8_prac_JWT.Service
     {
         private readonly ContextDb _context;
         private readonly JwtGenerator _jwtGenerator;
+        private readonly IHttpContextAccessor _httpContext;
 
-        public UsersService(ContextDb context, JwtGenerator jwtGenerator)
+        public UsersService(ContextDb context, JwtGenerator jwtGenerator, IHttpContextAccessor httpContext)
         {
             _context = context;
             _jwtGenerator = jwtGenerator;
+            _httpContext = httpContext; // для редактирование самого себя профиля в покупателе
         }
 
         // создание покупателя-пользователя
@@ -694,6 +696,493 @@ namespace _8_prac_JWT.Service
             return new OkObjectResult(new
             {
                 status = true
+                , message = "Успешно"
+            });
+        }
+
+        // изменение профиля админа через админа 
+        public async Task<IActionResult> PutMyProfileAdminAsync(PutAdminMyProfilesRequests putAdminMyProfile)
+        {
+            string? token = _httpContext.HttpContext.Request.Headers["Authorization"].FirstOrDefault(); 
+            if (token == null)
+            {
+                return new BadRequestObjectResult(new { status = false, message = "Неправильный jwt" });
+            }
+
+            var userid = await _context.Sessions.FirstOrDefaultAsync(u => u.Token == token); 
+            if (userid == null)
+            {
+                return new NotFoundObjectResult(new { status = false, message = "Ошибка" });
+            }
+
+            int adminId = userid.User_id;
+
+            var user_put = await _context.Users.FirstOrDefaultAsync(b => b.User_id == adminId && b.Role_id == 1);
+
+            if (user_put == null)
+            {
+                return new NotFoundObjectResult(new
+                {
+                    status = false,
+                    message = $"Нет админа с таким id: {adminId}"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putAdminMyProfile.User_fullname))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Фамилия и имя не могут быть пустыми"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putAdminMyProfile.Email))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Почта не может быть пустой"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putAdminMyProfile.Address))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Адрес не может быть пустым"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putAdminMyProfile.PhoneNumber))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Номер телефона не может быть пустым"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putAdminMyProfile.Login_N))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Логин не может быть пустым"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putAdminMyProfile.Password_N))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Пароль не может быть пустым"
+                });
+            }
+
+            var check_email = await _context.Users.FirstOrDefaultAsync(e => e.Email.ToLower() == putAdminMyProfile.Email.ToLower() && e.User_id != adminId);
+
+            if (check_email != null)
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message = "Пользователь с таким email уже существует",
+                    status = false
+                });
+            }
+
+            var check_Login = await _context.Logins.FirstOrDefaultAsync(e => e.Login_name.ToLower() == putAdminMyProfile.Login_N.ToLower() && e.User_id != adminId);
+
+            if (check_Login != null)
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message = "Пользователь с таким Login уже существует",
+                    status = false
+                });
+            }
+
+            var check_phone_n = await _context.Users.FirstOrDefaultAsync(e => e.PhoneNumber.ToLower() == putAdminMyProfile.PhoneNumber.ToLower() && e.User_id != adminId);
+
+            if (check_phone_n != null)
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message = "Пользователь с таким телефонным номером уже существует",
+                    status = false
+                });
+            }
+
+            var login = await _context.Logins.FirstOrDefaultAsync(l => l.User_id == adminId);
+
+            user_put.User_fullname = putAdminMyProfile.User_fullname;
+            user_put.Email = putAdminMyProfile.Email;
+            user_put.Address = putAdminMyProfile.Address;
+            user_put.PhoneNumber = putAdminMyProfile.PhoneNumber;
+            user_put.UpdatedAt = DateOnly.FromDateTime(DateTime.Now);
+            login.Login_name = putAdminMyProfile.Login_N;
+            login.Password = putAdminMyProfile.Password_N;
+
+            var log = new LogUserAction()
+            {
+                Created_at = DateTime.Now,
+                User_id = adminId,
+                Action_id = 4 // обновление в бд
+            };
+            await _context.AddAsync(log);
+
+            await _context.SaveChangesAsync();
+
+            return new OkObjectResult(new
+            {
+                status = true,
+                message = "Успешно"
+            });
+        }
+
+        // изменение менеджера самого себя
+        public async Task<IActionResult> PutMyProfileEmployeeAsync(PutEmployeeMyProfileRequests putEmployeeMyProfile)
+        {
+            string? token = _httpContext.HttpContext.Request.Headers["Authorization"].FirstOrDefault(); // получение токена
+            if (token == null)
+            {
+                return new BadRequestObjectResult(new { status = false, message = "Неправильный jwt" });
+            }
+
+            var userid = await _context.Sessions.FirstOrDefaultAsync(u => u.Token == token); // поиск в бд
+            if (userid == null)
+            {
+                return new NotFoundObjectResult(new { status = false, message = "Ошибка" });
+            }
+
+            // Используем ID менеджера из сессии (из токена)
+            int managerId = userid.User_id;
+
+            var user_put = await _context.Users.FirstOrDefaultAsync(b => b.User_id == managerId && b.Role_id == 2);
+
+            if (user_put == null)
+            {
+                return new NotFoundObjectResult(new
+                {
+                    status = false,
+                    message = $"Нет менеджера с таким id: {managerId}"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putEmployeeMyProfile.User_fullname))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Фамилия и имя не могут быть пустыми"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putEmployeeMyProfile.Email))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Почта не может быть пустой"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putEmployeeMyProfile.Address))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Адрес не может быть пустым"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putEmployeeMyProfile.PhoneNumber))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Номер телефона не может быть пустым"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putEmployeeMyProfile.Login_N))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Логин не может быть пустым"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putEmployeeMyProfile.Password_N))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Пароль не может быть пустым"
+                });
+            }
+
+            var check_email = await _context.Users.FirstOrDefaultAsync(e => e.Email.ToLower() == putEmployeeMyProfile.Email.ToLower() && e.User_id != managerId);
+
+            if (check_email != null)
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message = "Пользователь с таким email уже существует",
+                    status = false
+                });
+            }
+
+            var check_Login = await _context.Logins.FirstOrDefaultAsync(e => e.Login_name.ToLower() == putEmployeeMyProfile.Login_N.ToLower() && e.User_id != managerId);
+
+            if (check_Login != null)
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message = "Пользователь с таким Login уже существует",
+                    status = false
+                });
+            }
+
+            var check_phone_n = await _context.Users.FirstOrDefaultAsync(e => e.PhoneNumber.ToLower() == putEmployeeMyProfile.PhoneNumber.ToLower() && e.User_id != managerId);
+
+            if (check_phone_n != null)
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message = "Пользователь с таким телефонным номером уже существует",
+                    status = false
+                });
+            }
+
+            var login = await _context.Logins.FirstOrDefaultAsync(l => l.User_id == managerId);
+
+            user_put.User_fullname = putEmployeeMyProfile.User_fullname;
+            user_put.Email = putEmployeeMyProfile.Email;
+            user_put.Address = putEmployeeMyProfile.Address;
+            user_put.PhoneNumber = putEmployeeMyProfile.PhoneNumber;
+            user_put.UpdatedAt = DateOnly.FromDateTime(DateTime.Now);
+            login.Login_name = putEmployeeMyProfile.Login_N;
+            login.Password = putEmployeeMyProfile.Password_N;
+
+            var log = new LogUserAction()
+            {
+                Created_at = DateTime.Now,
+                User_id = managerId,
+                Action_id = 4 // обновление в бд
+            };
+            await _context.AddAsync(log);
+
+            await _context.SaveChangesAsync();
+
+            return new OkObjectResult(new
+            {
+                status = true,
+                message = "Успешно"
+            });
+        }
+
+        // изменение покупателя самого себя
+        public async Task<IActionResult> PutUserMyProfileAsync(PutUserMyProfilesRequests putUserMyProfile)
+        {
+            string? token = _httpContext.HttpContext.Request.Headers["Authorization"].FirstOrDefault();
+            if (token == null)
+            {
+                return new BadRequestObjectResult(new { status = false, message = "Неправильный jwt" });
+            }
+            var userid = await _context.Sessions.FirstOrDefaultAsync(u => u.Token == token);
+            if (userid == null)
+            {
+                return new NotFoundObjectResult(new { status = false, message = "Ошибка" });
+            }
+
+            int customerId = userid.User_id;
+
+            var user_put = await _context.Users.FirstOrDefaultAsync(b => b.User_id == customerId && b.Role_id == 3);
+
+            if (user_put == null)
+            {
+                return new NotFoundObjectResult(new
+                {
+                    status = false,
+                    message = $"Нет покупателя с таким id: {customerId}"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putUserMyProfile.User_fullname))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Фамилия и имя не могут быть пустыми"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putUserMyProfile.Email))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Почта не может быть пустой"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putUserMyProfile.Address))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Адрес не может быть пустым"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putUserMyProfile.PhoneNumber))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Номер телефона не может быть пустым"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putUserMyProfile.Login_N))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Логин не может быть пустыми"
+                });
+            }
+
+            if (string.IsNullOrEmpty(putUserMyProfile.Password_N))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Пароль не может быть пустым"
+                });
+            }
+
+            var check_email = await _context.Users.FirstOrDefaultAsync(e => e.Email.ToLower() == putUserMyProfile.Email.ToLower() && e.User_id != customerId);
+
+            if (check_email != null)
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message = "Пользователь с таким email уже существует",
+                    status = false
+                });
+            }
+
+            var check_Login = await _context.Logins.FirstOrDefaultAsync(e => e.Login_name.ToLower() == putUserMyProfile.Login_N.ToLower() && e.User_id != customerId);
+
+            if (check_Login != null)
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message = "Пользователь с таким Login уже существует",
+                    status = false
+                });
+            }
+
+            var check_phone_n = await _context.Users.FirstOrDefaultAsync(e => e.PhoneNumber.ToLower() == putUserMyProfile.PhoneNumber.ToLower() && e.User_id != customerId);
+
+            if (check_phone_n != null)
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message = "Пользователь с таким телефонным номером уже существует",
+                    status = false
+                });
+            }
+
+            var login = await _context.Logins.FirstOrDefaultAsync(l => l.User_id == customerId);
+
+            user_put.User_fullname = putUserMyProfile.User_fullname;
+            user_put.Email = putUserMyProfile.Email;
+            user_put.Address = putUserMyProfile.Address;
+            user_put.PhoneNumber = putUserMyProfile.PhoneNumber;
+            user_put.UpdatedAt = DateOnly.FromDateTime(DateTime.Now);
+            login.Login_name = putUserMyProfile.Login_N;
+            login.Password = putUserMyProfile.Password_N;
+
+            var log = new LogUserAction()
+            {
+                Created_at = DateTime.Now,
+                User_id = customerId,
+                Action_id = 4 // обновление в бд
+            };
+            await _context.AddAsync(log);
+            await _context.SaveChangesAsync();
+
+            return new OkObjectResult(new
+            {
+                status = true,
+                message = "Успешно"
+            });
+        }
+
+        // изменение роли пользователя через админа
+        public async Task<IActionResult> PutUserRoleAsync( PutUserRoleRequest putUserRole)
+        {
+            if (putUserRole.User_id == 0)
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "Ошибка связи с ИД"
+                });
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(b => b.User_id == putUserRole.User_id);
+
+            if (user == null)
+            {
+                return new NotFoundObjectResult(new
+                {
+                    status = false,
+                    message = $"Нет такого пользователя с таким id: {putUserRole.User_id}"
+                });
+            }
+
+            if (putUserRole.Role_id == 0)
+            {
+                return new BadRequestObjectResult(new
+                {
+                    status = false,
+                    message = "У пользователя должна быть роль"
+                });
+            }
+
+            var role = await _context.Roles.FirstOrDefaultAsync(r => r.Role_id == putUserRole.Role_id);
+
+            if (role == null)
+            {
+                return new NotFoundObjectResult(new
+                {
+                    status = false,
+                    message = "Нет такой роли"
+                });
+            }
+
+            user.Role_id = putUserRole.Role_id;
+
+            var log = new LogUserAction()
+            {
+                Created_at = DateTime.Now,
+                User_id = putUserRole.User_id,
+                Action_id = 5 // изменение роли
+            };
+            await _context.AddAsync(log);
+            await _context.SaveChangesAsync();
+
+            return new OkObjectResult(new
+            {
+                status = true,
+                message = "Успешно обновлена роль"
             });
         }
     }
